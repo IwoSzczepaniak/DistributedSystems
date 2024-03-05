@@ -3,7 +3,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-public class JavaUdpServer {
+public class JavaTcpServer {
 
     public static void main(String args[]) throws Exception {
         System.out.println("JAVA UDP SERVER");
