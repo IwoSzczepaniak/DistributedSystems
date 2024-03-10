@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.FileReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -63,7 +64,20 @@ public class Client {
             BufferedReader consoleInput = new BufferedReader(new InputStreamReader(System.in));
             String message;
             while ((message = consoleInput.readLine()) != null) {
-                if (message.startsWith("U ")) {
+                if (message.startsWith("U ") && message.contains(".")) {
+                    String filePath = message.substring(2).trim();
+                    StringBuilder contentBuilder = new StringBuilder("\n");
+                    try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            contentBuilder.append(line).append("\n");
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    // Sending content via UDP
+                    sendViaUDP(serverHost, port, contentBuilder.toString());
+                } else if(message.startsWith("U ")){
                     sendViaUDP(serverHost, port, message.substring(2));
                 } else {
                     out.println(message);
