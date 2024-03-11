@@ -64,7 +64,7 @@ public class Client {
             BufferedReader consoleInput = new BufferedReader(new InputStreamReader(System.in));
             String message;
             while ((message = consoleInput.readLine()) != null) {
-                if (message.startsWith("U ") && message.contains(".")) {
+                if (message.startsWith("U:") && message.contains(".")) {
                     String filePath = message.substring(2).trim();
                     StringBuilder contentBuilder = new StringBuilder("\n");
                     try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
@@ -75,9 +75,8 @@ public class Client {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    // Sending content via UDP
                     sendViaUDP(serverHost, port, contentBuilder.toString());
-                } else if(message.startsWith("U ")){
+                } else if(message.startsWith("U:")){
                     sendViaUDP(serverHost, port, message.substring(2));
                 } else {
                     out.println(message);
@@ -95,4 +94,3 @@ public class Client {
         }
     }
 }
-

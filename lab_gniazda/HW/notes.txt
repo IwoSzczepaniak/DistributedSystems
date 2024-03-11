@@ -1,2 +1,0 @@
-- Czy osoba wysyłająca również powinna dostawać UDP message?
-- Ogarnąć wysyłanie ASCII arta z pliku
