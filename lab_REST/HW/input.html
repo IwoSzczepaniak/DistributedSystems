@@ -1,0 +1,17 @@
+<h2>Book explorer</h2>
+<p>Enter the title, fragment, or author's name to search for books</p>
+<form action="/author" method="GET">
+    <label for="author_query">Look for the author:</label>
+    <input type="text" id="author_query" name="author_" placeholder="Author Name"><br><br>
+    <input type="submit" value="Search">
+</form>
+<form action="/title" method="GET">
+    <label for="title_query">Look for the title:</label>
+    <input type="text" id="title_query" name="title_" placeholder="Book title"><br><br>
+    <input type="submit" value="Search">
+</form>
+<form action="/fragment" method="GET">
+    <label for="fragment_query">Search Query:</label>
+    <input type="text" id="fragment_query" name="fragment_" placeholder="Search for Fragment"><br><br>
+    <input type="submit" value="Search">
+</form>

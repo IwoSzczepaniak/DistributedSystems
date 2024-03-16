@@ -1,0 +1,15 @@
+Klient (przeglądarka) ma wysyłać żądanie w oparciu o dane z formularza (statyczny HTML) i otrzymać odpowiedź w formie prostej strony www, wygenerowanej przez tworzony serwis. Wystarczy użyć czystego HTML, bez stylizacji, bez dodatkowych bibliotek frontendowych (nie jest to elementem oceny). Nie musi być piękne, ma działać.
+Tworzony serwis powinien wykonać kilka zapytań (np.: o różne dane, do kilku serwisów itp.). Niech Państwa rozwiązanie nie będzie tylko takim proxy do jednego istniejącego serwisu i niech zapewnia dodatkową logikę (to będzie elementem oceny, najlepiej 2 lub więcej).
+Odpowiedź dla klienta musi być generowana przez serwer na podstawie: 1) żądań REST do publicznych serwisów i 2) lokalnej obróbki uzyskanych odpowiedzi.
+Serwer ma być uruchomiony na własnym serwerze aplikacyjnym działającym poza IDE (lub analogicznej technologii).
+atutem jest wystawienie serwisu w chmurze (np.: Heroku). 
+Serwer który udostępnia API musi być zgodny z REST.
+Implementacja elementów bezpieczeństwa API jest częścią oceny.
+Wybieramy serwisy otwarte lub dające dostęp ograniczony, lecz darmowy, np.: używające kodów deweloperskich.
+Dodatkowo (jest to elementem oceny): Przygotowujemy test zapytań HTTP z wykorzystaniem POSTMANa/SwaggerUI (klient-serwer i serwer-serwis_publiczny). Do oddania proszę mieć je już zapisane.
+Na co warto zwrócić uwagę?
+(!!) obsługę (a)synchroniczności zapytań serwera do serwisów zewnętrznych (np.: promises),
+(!) obsługę błędów i odpowiedzi z serwisów (np.: jeśli pojawi się błąd komunikacji z serwisem zewnętrznym, to generujemy odpowiedni komunikat do klienta, a nie 501 Internal server error),
+walidację danych wprowadzanych przez klienta/przyjmowanych przez serwer.
+
+Zaimplementuj w Pythonie serwis do zwracania proponowanych przepisów zgodnie z podanymi przez użytkownika składnikami
