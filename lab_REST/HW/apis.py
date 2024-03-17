@@ -2,15 +2,21 @@ from fastapi import HTTPException, Response, status
 from typing import Dict
 import httpx
 import aiohttp
+import asyncio
 
 
-async def search_gutendex(key):
+async def search_gutendex(key: str):
     API_BASE_URL = "https://gutendex.com"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"{API_BASE_URL}{key}") as response:
-            if response.status != 200:
-                return {}
-            return await response.json()
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{API_BASE_URL}{key}") as response:
+                if response.status != 200:
+                    return {}
+                return await response.json()
+    except aiohttp.ClientTimeoutError:
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request Timeout")
+    except aiohttp.ClientError:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from upstream server")
 
 
 def generate_json_gutendex(response_json: Dict):
@@ -24,13 +30,18 @@ def generate_json_gutendex(response_json: Dict):
     return display
 
 
-async def search_openlibrary(key):
+async def search_openlibrary(key: str):
     API_BASE_URL = "https://openlibrary.org"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{API_BASE_URL}{key}")
-        if response.status_code != 200:
-            return {}
-        return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{API_BASE_URL}{key}")
+            if response.status_code != 200:
+                return {}
+            return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request Timeout")
+    except httpx.HTTPError:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from upstream server")
 
 
 def generate_json_openlibrary(response_json: Dict):
@@ -44,9 +55,8 @@ def generate_json_openlibrary(response_json: Dict):
                               "authors": ', '.join(el["author_name"]),
                               "language": ', '.join(el["language"]),
                               "source": "OpenLibrary",
-                              "links": ["https://openlibrary.org" + sub_link for sub_link in el["seed"]]}
+                              "links": ["https://openlibrary.org" + sub_link for sub_link in el["seed"] if "book" in sub_link]}
     return display
-
 
 
 def generate_universal_html(page_title: str, response_json: Dict):
@@ -55,7 +65,8 @@ def generate_universal_html(page_title: str, response_json: Dict):
         html_content += "<li>"
         html_content += f"<strong>Title:</strong> {book_info['title']}<br>"
         html_content += f"<strong>Authors:</strong> {book_info['authors']}<br>"
-        html_content += f"<strong>Language:</strong> {book_info['language']}<br>"
+        if 'language' in book_info:
+            html_content += f"<strong>Language:</strong> {book_info['language']}<br>"
         html_content += f"<strong>Source:</strong> {book_info['source']}<br>"
         html_content += "<strong>Links:</strong> <ul>"
         for link in book_info['links']:
@@ -67,14 +78,17 @@ def generate_universal_html(page_title: str, response_json: Dict):
 
 
 async def query_html(page_title: str, query_gut: str, query_open: str):
-    gutendex_resp = await search_gutendex(query_gut)
+    gutendex_func = search_gutendex(query_gut)
+    openlib_func = search_openlibrary(query_open)
+
+    gutendex_resp, openlib_resp = await asyncio.gather(gutendex_func, openlib_func)
+
     if gutendex_resp:
         gutendex_res = gutendex_resp["results"]
         gutendex_json = generate_json_gutendex(gutendex_res)
     else:
         gutendex_json = {}
 
-    openlib_resp = await search_openlibrary(query_open)
     if openlib_resp:
         openlib_res = openlib_resp['docs']
         openlib_json = generate_json_openlibrary(openlib_res)
@@ -88,21 +102,66 @@ async def query_html(page_title: str, query_gut: str, query_open: str):
             status_code=status.HTTP_404_NOT_FOUND, detail="Results not found"
         )
 
-    # keys = list(union_json.keys())
-    # shuffle(keys)
     keys = sorted(union_json.keys(), key=lambda x: len(union_json[x]["links"]), reverse=True)
     union_json = {key: union_json[key] for key in keys}
 
     return generate_universal_html(page_title, union_json)
 
 
-async def search_poetrydb(key):
+def generate_topic_json_openlibrary(response_json: Dict):
+    display = {}
+    for el in response_json:
+        display[el["key"]] = {"title": el["title"],
+                              "authors": ', '.join([author["name"] for author in el["authors"]]),
+                              # "language": ', '.join(el["language"]),
+                              "source": "OpenLibrary",
+                              "links": ["https://openlibrary.org" + sub_link for sub_link in el["key"]]}
+    return display
+
+
+async def query_topic_html(page_title: str, query_gut: str, query_open: str):
+    gutendex_func = search_gutendex(query_gut)
+    openlib_func = search_openlibrary(query_open)
+
+    gutendex_resp, openlib_resp = await asyncio.gather(gutendex_func, openlib_func)
+
+    if gutendex_resp:
+        gutendex_res = gutendex_resp["results"]
+        gutendex_json = generate_json_gutendex(gutendex_res)
+    else:
+        gutendex_json = {}
+
+    if openlib_resp:
+        openlib_res = openlib_resp['works']
+        openlib_json = generate_topic_json_openlibrary(openlib_res)
+    else:
+        openlib_json = {}
+
+    union_json = {**gutendex_json, **openlib_json}
+
+    if not union_json:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Results not found"
+        )
+
+    keys = sorted(union_json.keys(), key=lambda x: len(union_json[x]["links"]), reverse=True)
+    union_json = {key: union_json[key] for key in keys}
+
+    return generate_universal_html(page_title, union_json)
+
+
+async def search_poetrydb(key: str):
     API_BASE_URL = "https://poetrydb.org"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{API_BASE_URL}{key}")
-        if response.status_code != 200:
-            raise HTTPException(status_code=404, detail="Media not found")
-        return response.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{API_BASE_URL}{key}")
+            if response.status_code != 200:
+                raise HTTPException(status_code=404, detail="Media not found")
+            return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request Timeout")
+    except httpx.HTTPError:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from upstream server")
 
 
 def generate_json_poetrydb(response_json: Dict):

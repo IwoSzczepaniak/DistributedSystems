@@ -1,23 +1,53 @@
-<h1>Book explorer</h1>
-<p>Enter the title or author's name to search for books</p>
+<style>
+    label {
+        display: inline-block;
+        width: 150px; 
+        text-align: left;
+    }
+    body{
+        text-align: center;
+    }
+</style>
+
+<html>
+<head><title>eLibrary</title></head>
+
+<body>
+<h1>eLibrary</h1>
+<br>
+<h2>Book explorer</h2>
+<p>Enter the topic, title or author's name to search for books</p>
 <form action="/author" method="GET">
-    <label for="author_query">Look for the author:</label>
-    <input type="text" id="author_query" name="author_" placeholder="Author Name"><br><br>
+    <label for="author_query">Search for the author:</label>
+    <input type="text" id="author_query" name="author_" placeholder="Author Name">
     <input type="submit" value="Search">
 </form>
 <form action="/title" method="GET">
-    <label for="title_query">Look for the title:</label>
-    <input type="text" id="title_query" name="title_" placeholder="Book title"><br><br>
+    <label for="title_query">Search for the title:</label>
+    <input type="text" id="title_query" name="title_" placeholder="Book title">
     <input type="submit" value="Search">
 </form>
 <form action="/topic" method="GET">
-    <label for="topic_query">Topic:</label>
-    <input type="text" id="topic_query" name="topic_" placeholder="Topic/Subject"><br><br>
+    <label for="topic_query">Search for the topic:</label>
+    <input type="text" id="topic_query" name="topic_" placeholder="Topic/Subject">
     <input type="submit" value="Search">
 </form>
 
 <h2>Poetry explorer</h2>
-<form action="/random_poem" method="GET">
-    <label for="rand_poem">Fragment:</label>
+<p>Enter the title or author's name to search for poems</p>
+<form action="/author_poem" method="GET">
+    <label for="author_poem_query">Search for the author:</label>
+    <input type="text" id="author_poem_query" name="author_poem_" placeholder="Author Name">
     <input type="submit" value="Search">
 </form>
+<form action="/title_poem" method="GET">
+    <label for="title_poem_query">Search for the title:</label>
+    <input type="text" id="title_poem_query" name="title_poem_" placeholder="Poem title">
+    <input type="submit" value="Search">
+</form>
+<form action="/random_poem" method="GET">
+    <label for="rand_poem">Random poem:</label>
+    <input type="submit" value="Search">
+</form>
+</body>
+</html>
