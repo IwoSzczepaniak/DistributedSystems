@@ -1,16 +1,16 @@
 from fastapi import HTTPException, Response, status
-import requests
 from typing import Dict
-from random import shuffle
+import httpx
+import aiohttp
 
 
-def search_gutendex(key):
+async def search_gutendex(key):
     API_BASE_URL = "https://gutendex.com"
-    response = requests.get(f"{API_BASE_URL}{key}")
-    if response.status_code != 200:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Media not found")
-    return response.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{API_BASE_URL}{key}") as response:
+            if response.status != 200:
+                return {}
+            return await response.json()
 
 
 def generate_json_gutendex(response_json: Dict):
@@ -24,13 +24,13 @@ def generate_json_gutendex(response_json: Dict):
     return display
 
 
-def search_openlibrary(key):
+async def search_openlibrary(key):
     API_BASE_URL = "https://openlibrary.org"
-    response = requests.get(f"{API_BASE_URL}{key}")
-    if response.status_code != 200:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Media not found")
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}{key}")
+        if response.status_code != 200:
+            return {}
+        return response.json()
 
 
 def generate_json_openlibrary(response_json: Dict):
@@ -41,11 +41,12 @@ def generate_json_openlibrary(response_json: Dict):
             continue
 
         display[el["key"]] = {"title": el["title"],
-                             "authors": ', '.join(el["author_name"]),
-                             "language": ', '.join(el["language"]),
-                             "source": "OpenLibrary",
-                             "links": ["https://openlibrary.org" + sub_link for sub_link in el["seed"]]}
+                              "authors": ', '.join(el["author_name"]),
+                              "language": ', '.join(el["language"]),
+                              "source": "OpenLibrary",
+                              "links": ["https://openlibrary.org" + sub_link for sub_link in el["seed"]]}
     return display
+
 
 
 def generate_universal_html(page_title: str, response_json: Dict):
@@ -65,44 +66,74 @@ def generate_universal_html(page_title: str, response_json: Dict):
     return Response(content=html_content, media_type="text/html")
 
 
-def query_html(page_title: str, query: str):
-    gutendex_resp = search_gutendex(f"/books?search={query}")
-    gutendex_res = gutendex_resp["results"]
-    gutendex_json = generate_json_gutendex(gutendex_res)
+async def query_html(page_title: str, query_gut: str, query_open: str):
+    gutendex_resp = await search_gutendex(query_gut)
+    if gutendex_resp:
+        gutendex_res = gutendex_resp["results"]
+        gutendex_json = generate_json_gutendex(gutendex_res)
+    else:
+        gutendex_json = {}
 
-    openlib_resp = search_openlibrary(f"/search.json?q={query}")
-    openlib_res = openlib_resp['docs']
-    openlib_json = generate_json_openlibrary(openlib_res)
+    openlib_resp = await search_openlibrary(query_open)
+    if openlib_resp:
+        openlib_res = openlib_resp['docs']
+        openlib_json = generate_json_openlibrary(openlib_res)
+    else:
+        openlib_json = {}
 
     union_json = {**gutendex_json, **openlib_json}
 
-    keys = list(union_json.keys())
-    shuffle(keys)
+    if not union_json:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Results not found"
+        )
+
+    # keys = list(union_json.keys())
+    # shuffle(keys)
+    keys = sorted(union_json.keys(), key=lambda x: len(union_json[x]["links"]), reverse=True)
     union_json = {key: union_json[key] for key in keys}
 
     return generate_universal_html(page_title, union_json)
 
 
-def generate_html(page_title: str,
-                  response_json: Dict,
-                  show_author: bool = True,
-                  show_title: bool = True):
+async def search_poetrydb(key):
+    API_BASE_URL = "https://poetrydb.org"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}{key}")
+        if response.status_code != 200:
+            raise HTTPException(status_code=404, detail="Media not found")
+        return response.json()
 
-    display = f"<html><head><title>{page_title}</title></head>"
-    display += f"<body><h1>{page_title}</h1><ul>"
 
+def generate_json_poetrydb(response_json: Dict):
+    display = {}
     for el in response_json:
-        display += "<li>"
-        if show_author:
-            display += f"<strong>Authors:</strong> {'; '.join([author['name'] for author in el['authors']])}<br>"
-        if show_title:
-            display += f"<strong>Title:</strong> {el['title']}<br>"
-        display += f"<strong>Language:</strong> {', '.join(el['languages'])}<br>"
-        display += "<strong>Source:</strong> Gutenberg<br>"
-        display += "<strong>Links:</strong><ul>"
-        for key, link in el['formats'].items():
-            display += f"<li><a href='{link}'>{link}</a></li>"
-        display += "</ul>li><br><br>"
+        if 'title' in el and 'author' in el and 'lines' in el:
+            display[el['title']] = {
+                "title": el["title"],
+                "author": el["author"],
+                "poem": '\n' + '\n\n'.join(el["lines"])
+            }
+    return display
 
-    display += "</ul></body></html>"
-    return Response(content=display, media_type="text/html")
+
+def generate_poem_html(page_title: str, response_json: Dict):
+    html_content = f"<html><head><title>{page_title}</title></head><body><h1>{page_title}</h1><ul>"
+    for key, book_info in response_json.items():
+        html_content += f"<h1>Title: {book_info['title']}</h1><br>"
+        html_content += f"<strong>Authors:</strong> {book_info['author']}<br>"
+        html_content += f"<pre> {book_info['poem']}</pre><br>"
+        html_content += "<br><br>"
+    html_content += "</ul></body></html>"
+    return Response(content=html_content, media_type="text/html")
+
+
+async def query_poem_html(page_title: str, query: str):
+    poemdb_res = await search_poetrydb(query)
+    poemdb_json = generate_json_poetrydb(poemdb_res)
+
+    if not poemdb_json:
+        raise HTTPException(
+             status_code=status.HTTP_404_NOT_FOUND, detail="Results not found"
+        )
+    return generate_poem_html(page_title, poemdb_json)

@@ -1,5 +1,5 @@
-<h2>Book explorer</h2>
-<p>Enter the title, fragment, or author's name to search for books</p>
+<h1>Book explorer</h1>
+<p>Enter the title or author's name to search for books</p>
 <form action="/author" method="GET">
     <label for="author_query">Look for the author:</label>
     <input type="text" id="author_query" name="author_" placeholder="Author Name"><br><br>
@@ -10,8 +10,14 @@
     <input type="text" id="title_query" name="title_" placeholder="Book title"><br><br>
     <input type="submit" value="Search">
 </form>
-<form action="/fragment" method="GET">
-    <label for="fragment_query">Search Query:</label>
-    <input type="text" id="fragment_query" name="fragment_" placeholder="Search for Fragment"><br><br>
+<form action="/topic" method="GET">
+    <label for="topic_query">Topic:</label>
+    <input type="text" id="topic_query" name="topic_" placeholder="Topic/Subject"><br><br>
+    <input type="submit" value="Search">
+</form>
+
+<h2>Poetry explorer</h2>
+<form action="/random_poem" method="GET">
+    <label for="rand_poem">Fragment:</label>
     <input type="submit" value="Search">
 </form>
